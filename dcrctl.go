@@ -54,6 +54,24 @@ func usage(errorMessage string) {
 	fmt.Fprintln(os.Stderr, listCmdMessage)
 }
 
+func methodUsageFlags(preferWallet bool, methodStr string) (interface{}, dcrjson.UsageFlag, error) {
+	var method interface{}
+	if preferWallet {
+		method = wallettypes.Method(methodStr)
+		usageFlags, err := dcrjson.MethodUsageFlags(method)
+		if err == nil {
+			return method, usageFlags, nil
+		}
+	}
+	method = dcrdtypes.Method(methodStr)
+	usageFlags, err := dcrjson.MethodUsageFlags(method)
+	if err != nil && !preferWallet {
+		method = wallettypes.Method(methodStr)
+		usageFlags, err = dcrjson.MethodUsageFlags(method)
+	}
+	return method, usageFlags, err
+}
+
 func main() {
 	cfg, args, err := loadConfig()
 	if err != nil {
@@ -68,12 +86,7 @@ func main() {
 	// Ensure the specified method identifies a valid registered command and
 	// is one of the usable types.
 	methodStr := args[0]
-	var method interface{} = dcrdtypes.Method(methodStr)
-	usageFlags, err := dcrjson.MethodUsageFlags(method)
-	if err != nil {
-		method = wallettypes.Method(methodStr)
-		usageFlags, err = dcrjson.MethodUsageFlags(method)
-	}
+	method, usageFlags, err := methodUsageFlags(cfg.Wallet, methodStr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unrecognized command %q\n", methodStr)
 		fmt.Fprintln(os.Stderr, listCmdMessage)
